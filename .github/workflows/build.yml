@@ -38,7 +38,7 @@ jobs:
         run: |
           rm -rf reko
           mkdir -p reko
-          unzip -q REKO_GitHub_Ready.zip -d reko
+          unzip -q "REKO_GitHub_Ready (1).zip" -d reko
 
           if [ -f "reko/settings.gradle.kts" ]; then
             echo "PROJECT_DIR=reko" >> "$GITHUB_ENV"
