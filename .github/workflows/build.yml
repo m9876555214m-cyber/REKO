@@ -33,34 +33,12 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Extract REKO project
-        shell: bash
-        run: |
-          rm -rf reko
-          mkdir -p reko
-          ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" ! -name "REKO_GitHub_Ready.zip" -print -quit)
-echo "Using ZIP: $ZIP_FILE"
-unzip -q "$ZIP_FILE" -d reko
-
-
-          if [ -f "reko/settings.gradle.kts" ]; then
-            echo "PROJECT_DIR=reko" >> "$GITHUB_ENV"
-          elif [ -f "reko/REKO_GitHub_Ready/settings.gradle.kts" ]; then
-            echo "PROJECT_DIR=reko/REKO_GitHub_Ready" >> "$GITHUB_ENV"
-          else
-            echo "ERROR: settings.gradle.kts was not found."
-            find reko -maxdepth 4 -type f | sort
-            exit 1
-          fi
-
       - name: Build debug APK
-        run: |
-          cd "$PROJECT_DIR"
-          gradle :app:assembleDebug --no-daemon --stacktrace
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: REKO-debug-APK
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
