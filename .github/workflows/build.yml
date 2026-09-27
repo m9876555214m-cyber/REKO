@@ -3,40 +3,61 @@ name: Build REKO APK
 on:
   workflow_dispatch:
   push:
-    paths:
-      - "REKO_GitHub_Ready.zip"
-      - ".github/workflows/build.yml"
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
-      - name: Setup Gradle
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.9"
+          gradle-version: '8.9'
 
-      - name: Extract REKO
+      - name: Extract REKO project
+        shell: bash
         run: |
-          mkdir reko
+          rm -rf reko
+          mkdir -p reko
           unzip -q REKO_GitHub_Ready.zip -d reko
 
-      - name: Build APK
-        working-directory: reko
-        run: gradle assembleDebug
+          if [ -f "reko/settings.gradle.kts" ]; then
+            echo "PROJECT_DIR=reko" >> "$GITHUB_ENV"
+          elif [ -f "reko/REKO_GitHub_Ready/settings.gradle.kts" ]; then
+            echo "PROJECT_DIR=reko/REKO_GitHub_Ready" >> "$GITHUB_ENV"
+          else
+            echo "ERROR: settings.gradle.kts was not found."
+            find reko -maxdepth 4 -type f | sort
+            exit 1
+          fi
+
+      - name: Build debug APK
+        run: |
+          cd "$PROJECT_DIR"
+          gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: REKO-debug-APK
-          path: reko/app/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
